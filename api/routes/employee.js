@@ -48,6 +48,28 @@ router.get('/byEmpId/:empId', (req, res,next) =>{
 
 });
 
+router.get('/lastRecord', (req, res,next) =>{
+    const empId = req.params.empId;
+    Employee.find().limit(1).sort({$natural:-1})
+    //.select('emp_id first_name last_name email job_type status')
+    .exec()
+    .then(result =>{
+        const response = {
+            employee_count:result.length,
+            employee_list:result
+        }
+        res.status(200).json({
+            responseBody:response
+        })
+    })
+    .catch(err=>{
+        res.status(500).json({
+            error:err
+        })
+    })
+
+});
+
 /*Retrive employee information by Email Id*/
 router.get('/byEmailId/:emailId', (req, res,next) =>{
     const empId = req.params.emailId;
@@ -72,26 +94,37 @@ router.get('/byEmailId/:emailId', (req, res,next) =>{
 });
 
 /*Inserting new employee details*/
-router.post('/', (req, res,next) =>{
-    const employee = new Employee({
-        _id:new mongoose.Types.ObjectId,
-        emp_id:req.body.emp_id,
-        first_name:req.body.first_name,
-        last_name:req.body.last_name,
-        email:req.body.email,
-        phone:req.body.phone,
-        grade:req.body.grade,
-        role:req.body.role,
-        reporting_manager:req.body.reporting_manager,
-        joining_date:req.body.joining_date,
-        job_type:req.body.job_type,
-        status:req.body.status       
-    })
-    employee.save()
+router.post('/', (req, res,next) =>{    
+    Employee.find().limit(1).sort({$natural:-1})
+    .exec()
     .then(result =>{
-        res.status(201).json({employee:result});
+        if(result[0].emp_id){
+            const employee = new Employee({
+                _id:new mongoose.Types.ObjectId,
+                emp_id:(parseInt(result[0].emp_id) + 1).toString(),
+                first_name:req.body.first_name.toUpperCase(),
+                last_name:req.body.last_name.toUpperCase(),
+                email:req.body.email.toUpperCase(),
+                phone:req.body.phone,
+                grade:req.body.grade,
+                role:req.body.role.toUpperCase(),
+                reporting_manager:req.body.reporting_manager.toUpperCase(),
+                joining_date:req.body.joining_date,
+                job_type:req.body.job_type,
+                status:req.body.status       
+            })
+            employee.save()
+            .then(result =>{
+                res.status(201).json({employee:result});
+            })
+            .catch(err =>{
+                res.status(500).json({
+                    error:err
+                })
+            })
+        }
     })
-    .catch(err =>{
+    .catch(err=>{
         res.status(500).json({
             error:err
         })
@@ -124,7 +157,7 @@ router.patch('/:empId', (req, res, next)=>{
 /* Delete the user entry*/
 router.delete('/:empId', (req, res, next)=>{
     const empId = req.params.empId;
-    Employee.remove({emp_d:empId})
+    Employee.remove({emp_id:empId})
     .exec()
     .then(result =>{
         res.status(200).json({response:result});
